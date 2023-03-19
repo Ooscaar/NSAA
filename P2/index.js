@@ -1,9 +1,13 @@
 const express = require('express')
 const logger = require("morgan")
+const jwt = require('jsonwebtoken')
 const passport = require('passport')
 const LocalStrategy = require('passport-local').Strategy
 
 const app = express()
+
+// Don't do it in production
+const jwtSecret = require('crypto').randomBytes(16)
 
 // Logger
 app.use(logger('dev'))
@@ -48,7 +52,22 @@ app.post(
         session: false,
     }),
     (req, res) => {
-        res.send(`Hello ${req.user.username}`)
+        // Send jwt
+        const jwtClaims = {
+            sub: req.user.username,
+            iss: 'localhost:3000',
+            aud: 'localhost:3000',
+            exp: Math.floor(Date.now() / 1000) + 604800, // 1 week (7×24×60×60=604800s) from now
+            role: 'user' // just to show a private JWT field
+        }
+
+        const token = jwt.sign(jwtClaims, jwtSecret)
+
+        res.json(token)
+
+        // Debug info
+        console.log(`Token sent. Debug at https://jwt.io/?value=${token}`)
+        console.log(`Token secret (for verifying the signature): ${jwtSecret.toString('base64')}`)
     }
 )
 
