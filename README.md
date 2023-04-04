@@ -1,4 +1,4 @@
 # NSAA
 
-- [Cracking passwords with JohnA](src/P1)
-- [Express with passport](src/P2)
+- [Cracking passwords with John - P1](P1)
+- [Express with passport - P2](P2)
