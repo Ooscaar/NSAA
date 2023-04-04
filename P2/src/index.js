@@ -5,8 +5,11 @@ const cookieParser = require('cookie-parser')
 const localStrategy = require("./strategies/passwordStrategy")
 const { jwtStrategy } = require("./strategies/jwtStrategy")
 const controllers = require("./controllers")
+const { initUserTable } = require('./db')
 
 const app = express()
+
+initUserTable()
 
 // #### Middlewares ####
 app.use(logger('dev'))

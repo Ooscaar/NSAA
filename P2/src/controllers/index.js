@@ -35,7 +35,7 @@ router.post(
 
         // debug info
         console.log(`token sent. debug at https://jwt.io/?value=${token}`)
-        console.log(`token secret (for verifying the signature): ${jwtsecret.tostring('base64')}`)
+        console.log(`token secret (for verifying the signature): ${jwtSecret.toString('base64')}`)
     }
 )
 
@@ -48,7 +48,19 @@ router.get(
     }),
     function (req, res) {
         const fortune = fortune_teller.fortune()
-        res.send(`(${req.user}) fortune teller says: \n ${fortune}`)
+        res.send(`
+        <html>
+            <head>
+                <title>Fortune Teller</title>
+            </head>
+            <body>
+                <h1>Fortune Teller</h1>
+                <p>(${req.user}) fortune teller says: <br> ${fortune}</p>
+                <a href="/logout">Logout</a>
+            </body>
+        </html>
+        `)
+
     }
 )
 
@@ -60,7 +72,7 @@ router.get(
         session: false
     }),
     function (req, res) {
-        res.clearcookie('jwt')
+        res.clearCookie('jwt')
         res.redirect('/')
     }
 )
