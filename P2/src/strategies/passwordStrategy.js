@@ -14,6 +14,10 @@ module.exports = new LocalStrategy(
             if (err) {
                 return done(null, "User not registered")
             }
+            if (!row) {
+                return done(null, false, { message: 'Incorrect username or password.' })
+            }
+
             const { password: hashPassword } = row
 
             // Check with argon password
