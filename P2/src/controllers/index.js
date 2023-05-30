@@ -1,8 +1,12 @@
 const router = require('express').Router();
 const passport = require('passport')
 const fortune_teller = require('fortune-teller')
-const jwt = require('jsonwebtoken')
-const { jwtSecret } = require('../strategies/jwtStrategy')
+const { createJwtToken } = require('../lib/jwt')
+const { jwtSecret } = require("../strategies/jwtStrategy")
+
+// ***********************************************************
+// LOGIN ENDPOINTS
+// ***********************************************************
 
 // GET /login
 router.get('/login', (req, res) => {
@@ -17,17 +21,9 @@ router.post(
         session: false,
     }),
     (req, res) => {
-        // send jwt
-        const jwtclaims = {
-            sub: req.user.username,
-            iss: 'localhost:3000',
-            aud: 'localhost:3000',
-            exp: Math.floor(Date.now() / 1000) + 604800, // 1 week (7×24×60×60=604800s) from now
-            role: 'user' // just to show a private jwt field
-        }
-
-        const token = jwt.sign(jwtclaims, jwtSecret)
-
+        const token = createJwtToken({
+            sub: req.user.username
+        })
         res.cookie('jwt', token, { httponly: true, secure: true })
 
         // redirect to /
@@ -38,6 +34,19 @@ router.post(
         console.log(`token secret (for verifying the signature): ${jwtSecret.toString('base64')}`)
     }
 )
+
+// GET /logout
+router.get(
+    '/logout',
+    function (req, res) {
+        res.clearCookie('jwt')
+        res.redirect('/login')
+    }
+)
+
+// ***********************************************************
+// ENTRY POINT
+// ***********************************************************
 
 // GET /
 router.get(
@@ -50,12 +59,18 @@ router.get(
         const fortune = fortune_teller.fortune()
         res.send(`
         <html>
+        <style>
+            body {
+                font-family: Arial, Helvetica, sans-serif;
+            }
+        </style>
+
             <head>
                 <title>Fortune Teller</title>
             </head>
             <body>
                 <h1>Fortune Teller</h1>
-                <p>(${req.user}) fortune teller says: <br> ${fortune}</p>
+                <p>Fortune teller says: <br> ${fortune}</p>
                 <a href="/logout">Logout</a>
             </body>
         </html>
@@ -64,17 +79,56 @@ router.get(
     }
 )
 
-// GET /logout
+
+// ***********************************************************
+// GITHUB AUTH ENDPOINTS
+// ***********************************************************
+router.get('/auth/error', (req, res) => res.send('Unknown Error'))
+router.get('/auth/github', passport.authenticate('github', { scope: ['user:email'] }));
 router.get(
-    '/logout',
-    passport.authenticate("jwt", {
-        failureredirect: "/login",
-        session: false
+    '/auth/github/callback',
+    passport.authenticate('github', {
+        failureRedirect: '/auth/error',
+        session: false                      // IMPORTANT
     }),
     function (req, res) {
-        res.clearCookie('jwt')
-        res.redirect('/')
+        const email = req.user.emails[0].value;
+        const token = createJwtToken({
+            sub: email
+        })
+        res.cookie('jwt', token, { httponly: true, secure: true })
+        res.redirect('/');
+
+        console.log(`token sent. debug at https://jwt.io/?value=${token}`)
+        console.log(`token secret (for verifying the signature): ${jwtSecret.toString('base64')}`)
     }
+);
+// ***********************************************************
+
+// ***********************************************************
+// GOOGLE AUTH ENDPOINTS
+// ***********************************************************
+router.get(
+    '/auth/google',
+    passport.authenticate('google', { session: false, scope: ['openid', 'email', 'profile'] }),
 )
+router.get(
+    '/oidc/cb',
+    passport.authenticate('google', {
+        failureRedirect: '/auth/error',
+        session: false,
+    }),
+    function (req, res) {
+        const email = req.user.emails[0].value;
+        const token = createJwtToken({
+            sub: email
+        })
+        res.cookie('jwt', token, { httponly: true, secure: true })
+        res.redirect('/');
+
+        console.log(`token sent. debug at https://jwt.io/?value=${token}`)
+        console.log(`token secret (for verifying the signature): ${jwtSecret.toString('base64')}`)
+    }
+);
 
 module.exports = router;
